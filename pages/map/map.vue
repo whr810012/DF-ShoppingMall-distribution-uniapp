@@ -1,5 +1,10 @@
 <template>
   <view class="map-container">
+    <view class="info-panel">
+      <view class="info-text">预计配送时间：{{duration}}分钟</view>
+      <view class="info-text">配送距离：{{distance}}公里</view>
+    </view>
+    
     <map
       id="deliveryMap"
       class="map"
@@ -39,6 +44,12 @@ export default {
         borderWidth: 2,
         borderColor: '#fff',
         dottedLine: false
+      },
+      duration: 0,
+      distance: 0,
+      markerIcons: {
+        start: '/static/images/marker-start.svg',
+        end: '/static/images/marker-end.svg'
       }
     }
   },
@@ -129,19 +140,20 @@ export default {
           id: 1,
           latitude: this.currentLatitude,
           longitude: this.currentLongitude,
-          width: 35,
-          height: 35,
-          anchor: {x: 0.5, y: 0.5},
+          width: 40,
+          height: 40,
+          iconPath: this.markerIcons.start,
+          anchor: {x: 0.5, y: 1},
           callout: {
             content: '当前位置',
-            color: '#ffffff',
+            color: '#333333',
             fontSize: 14,
             borderRadius: 4,
-            bgColor: '#1989fa',
+            bgColor: '#ffffff',
             padding: 8,
-            display: 'ALWAYS',
+            display: 'BYCLICK',
             textAlign: 'center',
-            borderWidth: 2,
+            borderWidth: 0,
             borderColor: '#ffffff'
           }
         },
@@ -149,19 +161,20 @@ export default {
           id: 2,
           latitude: this.toLatitude,
           longitude: this.toLongitude,
-          width: 35,
-          height: 35,
-          anchor: {x: 0.5, y: 0.5},
+          width: 40,
+          height: 40,
+          iconPath: this.markerIcons.end,
+          anchor: {x: 0.5, y: 1},
           callout: {
             content: '配送目的地',
-            color: '#ffffff',
+            color: '#333333',
             fontSize: 14,
             borderRadius: 4,
-            bgColor: '#ff6b6b',
+            bgColor: '#ffffff',
             padding: 8,
-            display: 'ALWAYS',
+            display: 'BYCLICK',
             textAlign: 'center',
-            borderWidth: 2,
+            borderWidth: 0,
             borderColor: '#ffffff'
           }
         }
@@ -206,12 +219,12 @@ export default {
           
           this.adjustMapScale(points)
           
-          // 显示预计时间和距离
-          const duration = Math.ceil(routeData.paths[0].duration / 60) // 转换为分钟
-          const distance = (routeData.paths[0].distance / 1000).toFixed(1) // 转换为公里
+          // 更新持续时间和距离到 data
+          this.duration = Math.ceil(routeData.paths[0].duration / 60)
+          this.distance = (routeData.paths[0].distance / 1000).toFixed(1)
           
           uni.showToast({
-            title: `预计${duration}分钟，${distance}公里`,
+            title: `预计${this.duration}分钟，${this.distance}公里`,
             icon: 'none',
             duration: 3000
           })
@@ -304,5 +317,23 @@ export default {
   background-color: #007AFF;
   color: #fff;
   border-radius: 10rpx;
+}
+.info-panel {
+  position: fixed;
+  top: 20rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 20rpx 40rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.info-text {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.6;
+  text-align: center;
 }
 </style> 

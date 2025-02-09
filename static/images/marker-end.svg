@@ -1,0 +1,14 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 阴影效果 -->
+  <path d="M24 44C24 44 40 32 40 20C40 11.1634 32.8366 4 24 4C15.1634 4 8 11.1634 8 20C8 32 24 44 24 44Z" fill="#FF3B30" fill-opacity="0.2"/>
+  <!-- 主体形状 -->
+  <path d="M24 40C24 40 38 29 38 19C38 11.268 31.732 5 24 5C16.268 5 10 11.268 10 19C10 29 24 40 24 40Z" fill="#FF3B30"/>
+  <!-- 白色背景圆 -->
+  <circle cx="24" cy="19" r="10" fill="white"/>
+  <!-- 房子图标 -->
+  <path d="M18 23V19L24 14L30 19V23M18 23V25H30V23M18 23H30M21 25V21H27V25" 
+    stroke="#FF3B30" 
+    stroke-width="1.5" 
+    stroke-linecap="round" 
+    stroke-linejoin="round"/>
+</svg> 
