@@ -3,6 +3,7 @@
     <view class="info-panel">
       <view class="info-text">预计配送时间：{{duration}}分钟</view>
       <view class="info-text">配送距离：{{distance}}公里</view>
+      <view class="info-text">预计送达：{{estimatedArrivalTime}}</view>
     </view>
     
     <map
@@ -47,6 +48,7 @@ export default {
       },
       duration: 0,
       distance: 0,
+      estimatedArrivalTime: '--:--',
       markerIcons: {
         start: '/static/images/marker-start.svg',
         end: '/static/images/marker-end.svg'
@@ -223,6 +225,11 @@ export default {
           this.duration = Math.ceil(routeData.paths[0].duration / 60)
           this.distance = (routeData.paths[0].distance / 1000).toFixed(1)
           
+          // 计算预计送达时间
+          const now = new Date()
+          const arrivalTime = new Date(now.getTime() + routeData.paths[0].duration * 1000)
+          this.estimatedArrivalTime = `${arrivalTime.getHours().toString().padStart(2, '0')}:${arrivalTime.getMinutes().toString().padStart(2, '0')}`
+          
           uni.showToast({
             title: `预计${this.duration}分钟，${this.distance}公里`,
             icon: 'none',
@@ -328,12 +335,14 @@ export default {
   border-radius: 16rpx;
   box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
   z-index: 100;
+  min-width: 300rpx;
 }
 
 .info-text {
   font-size: 28rpx;
   color: #333;
-  line-height: 1.6;
+  line-height: 1.8;
   text-align: center;
+  white-space: nowrap;
 }
 </style> 
