@@ -55,6 +55,7 @@ export default {
         end: '/static/images/marker-end.svg'
       },
       locationRefreshInterval: null,
+      locationUpdateInterval: null,
     }
   },
   
@@ -66,7 +67,7 @@ export default {
     this.toLongitude = parseFloat(options.toLongitude)
     console.log('目的地坐标：', this.toLatitude, this.toLongitude)
     
-    // 获取位置
+    // 获取初始位置
     this.getLocation()
     
     // 设置标记点
@@ -75,14 +76,18 @@ export default {
     // 规划路线
     this.planRoute()
     
-    // 开始定时刷新位置
+    // 启动定时器
     this.startLocationRefresh()
   },
   
   // 添加 onUnload 生命周期函数来清理定时器
   onUnload() {
+    // 清理所有定时器
     if (this.locationRefreshInterval) {
       clearInterval(this.locationRefreshInterval)
+    }
+    if (this.locationUpdateInterval) {
+      clearInterval(this.locationUpdateInterval)
     }
   },
 
@@ -95,34 +100,14 @@ export default {
       uni.getLocation({
         type: 'gcj02',
         isHighAccuracy: true,
-        highAccuracyExpireTime: 3000,
-        success: async (res) => {
+        highAccuracyExpireTime: 30,
+        success: (res) => {
           console.log('获取位置成功：', res)
+          // 只更新地图上的位置
           this.currentLatitude = res.latitude
           this.currentLongitude = res.longitude
           this.setMarkers()
           this.planRoute()
-          
-          // 调用接口更新骑手位置
-          try {
-            const response = await request({
-              url: API.RIDER.AMEND,
-              method: 'POST',
-              data: {
-                id: uni.getStorageSync('userInfo').id,
-                ing: res.longitude.toString(),
-                lat: res.latitude.toString()
-              }
-            })
-            
-            if (response.statusCode === 200) {
-              console.log('位置更新成功')
-            } else {
-              console.error('位置更新失败:', response)
-            }
-          } catch (error) {
-            console.error('位置更新请求失败:', error)
-          }
         },
         fail: (err) => {
           console.error('获取位置失败：', err)
@@ -135,24 +120,20 @@ export default {
                   success: (settingRes) => {
                     console.log('打开设置页面成功', settingRes)
                     if (settingRes.authSetting['scope.userLocation']) {
-                      // 如果用户在设置页面打开了定位权限，重新获取位置
                       this.getLocation()
                     } else {
-                      // 如果用户没有开启权限，继续尝试获取位置
                       setTimeout(() => {
                         this.getLocation()
                       }, 1000)
                     }
                   },
                   fail: () => {
-                    // 打开设置页面失败，继续尝试获取位置
                     setTimeout(() => {
                       this.getLocation()
                     }, 1000)
                   }
                 })
               } else {
-                // 用户取消，继续尝试获取位置
                 setTimeout(() => {
                   this.getLocation()
                 }, 1000)
@@ -164,6 +145,29 @@ export default {
           uni.hideLoading()
         }
       })
+    },
+
+    // 新增方法：单独处理接口调用
+    async updateRiderLocation(latitude, longitude) {
+      try {
+        const response = await request({
+          url: API.RIDER.AMEND,
+          method: 'POST',
+          data: {
+            id: uni.getStorageSync('userInfo').id,
+            ing: longitude.toString(),
+            lat: latitude.toString()
+          }
+        })
+        
+        if (response.code === 1) {
+          console.log('位置更新成功')
+        } else {
+          console.error('位置更新失败:', response)
+        }
+      } catch (error) {
+        console.error('位置更新请求失败:', error)
+      }
     },
 
     setMarkers() {
@@ -259,12 +263,6 @@ export default {
           const now = new Date()
           const arrivalTime = new Date(now.getTime() + routeData.paths[0].duration * 1000)
           this.estimatedArrivalTime = `${arrivalTime.getHours().toString().padStart(2, '0')}:${arrivalTime.getMinutes().toString().padStart(2, '0')}`
-          
-          uni.showToast({
-            title: `预计${this.duration}分钟，${this.distance}公里`,
-            icon: 'none',
-            duration: 3000
-          })
         }
       } catch (err) {
         console.error('路线规划失败：', err)
@@ -280,17 +278,43 @@ export default {
       uni.showModal({
         title: '确认完成',
         content: '确认已完成配送？',
-        success: (res) => {
+        success: async (res) => {
           if (res.confirm) {
-            // 这里添加完成配送的接口调用
-            uni.showToast({
-              title: '配送完成',
-              success: () => {
-                setTimeout(() => {
-                  uni.navigateBack()
-                }, 1500)
+            try {
+              const response = await request({
+                url: API.RIDER.ORDER,
+                method: 'POST',
+                data: {
+                  orderId: this.orderId,
+                  riderId: uni.getStorageSync('userInfo').id
+                }
+              })
+
+              if (response.code === 1) {
+                uni.showToast({
+                  title: '配送完成',
+                  icon: 'success',
+                  success: () => {
+                    setTimeout(() => {
+                      uni.reLaunch({
+                        url: '/pages/orders/orders'
+                      })
+                    }, 1500)
+                  }
+                })
+              } else {
+                uni.showToast({
+                  title: '完成配送失败',
+                  icon: 'error'
+                })
               }
-            })
+            } catch (error) {
+              console.error('完成配送请求失败:', error)
+              uni.showToast({
+                title: '网络错误，请重试',
+                icon: 'error'
+              })
+            }
           }
         }
       })
@@ -322,10 +346,17 @@ export default {
       }
     },
     startLocationRefresh() {
-      // 设置3分钟定时器
+      // 每3秒获取一次位置并更新地图
       this.locationRefreshInterval = setInterval(() => {
-        this.getLocation() // 直接调用 getLocation 方法
-      }, 3 * 60 * 1000) // 3分钟转换为毫秒
+        this.getLocation()
+      }, 1000* 60)
+      
+      // 每3秒调用一次接口更新位置
+      this.locationUpdateInterval = setInterval(() => {
+        if (this.currentLatitude && this.currentLongitude) {
+          this.updateRiderLocation(this.currentLatitude, this.currentLongitude)
+        }
+      }, 1000* 60)
     },
   }
 }

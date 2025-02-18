@@ -2,9 +2,10 @@
   <view class="orders-container">
     <view 
       class="order-item" 
-      v-for="order in orderList" 
+      v-for="order in sortedOrderList" 
       :key="order.id"
-      @tap="goToMap(order)"
+      @tap="order.status === 2 ? goToMap(order) : null"
+      :class="{'clickable': order.status === 2}"
     >
       <view class="order-header">
         <text class="order-no">订单号：{{order.id}}</text>
@@ -39,6 +40,17 @@ export default {
     return {
       orderList: [],  // 改为空数组，将从接口获取数据
       userInfo: uni.getStorageSync('userInfo')
+    }
+  },
+  computed: {
+    sortedOrderList() {
+      return [...this.orderList].sort((a, b) => {
+        // 配送中的订单(status === 2)排在最前面
+        if (a.status === 2 && b.status !== 2) return -1;
+        if (a.status !== 2 && b.status === 2) return 1;
+        // 其他情况按照下单时间倒序排列
+        return new Date(b.createTime) - new Date(a.createTime);
+      });
     }
   },
   // 添加生命周期钩子
@@ -115,7 +127,7 @@ export default {
   position: relative;
   transition: all 0.3s;
 }
-.order-item:active {
+.order-item.clickable:active {
   transform: scale(0.98);
 }
 .order-header {

@@ -5,7 +5,8 @@ export const API = {
   RIDER: {
     LOGIN: `${BASE_URL}/rider/login`,  // 登录接口
     QUERY: `${BASE_URL}/rider/query`,  // 查询接口 
-    AMEND: `${BASE_URL}/rider/amend`  // 更新位置接口
+    AMEND: `${BASE_URL}/rider/amend`,  // 更新位置接口
+    ORDER: `${BASE_URL}/rider/order`  // 完成配送接口
 
   }
 }
