@@ -25,36 +25,47 @@
 </template>
 
 <script>
+import { API, request } from '@/api/api.js'
 export default {
   data() {
     return {
-      orderList: [
-        {
-          id: 1,
-          orderNo: 'DD20240315001',
-          status: '配送中',
-          fromAddress: '上海市黄浦区人民广场',
-          toAddress: '上海市黄浦区豫园',
-          toLatitude: 31.227401,
-          toLongitude: 121.492479
-        },
-        {
-          id: 2,
-          orderNo: 'DD20240315002',
-          status: '配送中',
-          fromAddress: '上海市黄浦区人民广场',
-          toAddress: '上海市静安区静安寺',
-          toLatitude: 31.223426,
-          toLongitude: 121.445867
-        }
-      ]
+      orderList: [],  // 改为空数组，将从接口获取数据
+      userInfo: uni.getStorageSync('userInfo')
     }
+  },
+  // 添加生命周期钩子
+  onShow() {
+    this.fetchOrders()
   },
   methods: {
     goToMap(order) {
       uni.navigateTo({
         url: `/pages/map/map?orderId=${order.id}&toLatitude=${order.toLatitude}&toLongitude=${order.toLongitude}`
       })
+    },
+    // 添加获取订单列表的方法
+    async fetchOrders() {
+      try {
+        console.log(this.userInfo);
+        const res = await request({
+          url: API.RIDER.QUERY + '?id=' + this.userInfo.id,
+          method: 'GET'
+        })
+        
+        if (res.statusCode === 200 && res.data.code === 0) {
+          this.orderList = res.data.data
+        } else {
+          uni.showToast({
+            title: '获取订单失败',
+            icon: 'none'
+          })
+        }
+      } catch (error) {
+        uni.showToast({
+          title: '网络错误',
+          icon: 'none'
+        })
+      }
     }
   }
 }

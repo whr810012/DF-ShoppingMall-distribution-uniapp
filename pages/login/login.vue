@@ -24,6 +24,8 @@
 </template>
 
 <script>
+import { API, request } from '@/api/api.js'
+
 export default {
   data() {
     return {
@@ -42,7 +44,7 @@ export default {
     }
   },
   methods: {
-    handleLogin() {
+    async handleLogin() {
       if (!this.username || !this.password) {
         uni.showToast({
           title: '请输入账号和密码',
@@ -55,19 +57,34 @@ export default {
         title: '登录中...'
       })
       
-      // 模拟登录请求
-      setTimeout(() => {
+      try {
+        const result = await request({
+          url: API.RIDER.LOGIN,
+          method: 'POST',
+          data: {
+            account: this.username,
+            password: this.password
+          }
+        })
+        
         // 登录成功后保存信息到本地
-        const token = 'mock_token_' + Date.now() // 实际项目中应该是后端返回的token
-        uni.setStorageSync('token', token)
         uni.setStorageSync('username', this.username)
         uni.setStorageSync('password', this.password)
+        uni.setStorageSync('userInfo', result.data)
+        // 生成一个临时token用于登录状态维护
+        uni.setStorageSync('token', 'logged_in')
         
         uni.hideLoading()
         uni.reLaunch({
           url: '/pages/orders/orders'
         })
-      }, 1500)
+      } catch (error) {
+        uni.hideLoading()
+        uni.showToast({
+          title: error.message || '登录失败，请重试',
+          icon: 'none'
+        })
+      }
     }
   }
 }
