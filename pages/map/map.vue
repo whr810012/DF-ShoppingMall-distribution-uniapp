@@ -110,7 +110,7 @@ export default {
               method: 'POST',
               data: {
                 id: uni.getStorageSync('userInfo').id,
-                lng: res.longitude.toString(),
+                ing: res.longitude.toString(),
                 lat: res.latitude.toString()
               }
             })
@@ -322,19 +322,11 @@ export default {
       }
     },
     startLocationRefresh() {
-      // 初始化时先获取一次位置
-      this.getCurrentLocation()
-      
       // 设置3分钟定时器
       this.locationRefreshInterval = setInterval(() => {
-        this.getCurrentLocation()
+        this.getLocation() // 直接调用 getLocation 方法
       }, 3 * 60 * 1000) // 3分钟转换为毫秒
     },
-    
-    // 更新 getCurrentLocation 方法
-    getCurrentLocation() {
-      this.getLocation() // 直接调用 getLocation 方法，因为已经包含了位置更新的逻辑
-    }
   }
 }
 </script>
