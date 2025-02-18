@@ -7,18 +7,26 @@
       @tap="goToMap(order)"
     >
       <view class="order-header">
-        <text class="order-no">订单号：{{order.orderNo}}</text>
-        <text class="order-status">{{order.status}}</text>
+        <text class="order-no">订单号：{{order.id}}</text>
+        <text class="order-status" :class="[getStatusClass(order.status)]">
+          {{getStatusText(order.status)}}
+        </text>
+      </view>
+      <view class="order-info">
+        <view class="customer-info">
+          <text class="name">{{order.name}}</text>
+          <text class="phone">{{order.phone}}</text>
+        </view>
+        <view class="price">¥{{order.price}}</view>
       </view>
       <view class="order-address">
-        <view class="from">
-          <text class="label">取货地址：</text>
-          <text>{{order.fromAddress}}</text>
-        </view>
         <view class="to">
           <text class="label">送货地址：</text>
-          <text>{{order.toAddress}}</text>
+          <text>{{order.address}}</text>
         </view>
+      </view>
+      <view class="order-time">
+        <text class="time">下单时间：{{order.createTime}}</text>
       </view>
     </view>
   </view>
@@ -40,7 +48,7 @@ export default {
   methods: {
     goToMap(order) {
       uni.navigateTo({
-        url: `/pages/map/map?orderId=${order.id}&toLatitude=${order.toLatitude}&toLongitude=${order.toLongitude}`
+        url: `/pages/map/map?orderId=${order.id}&toLatitude=${order.lat}&toLongitude=${order.ing}`
       })
     },
     // 添加获取订单列表的方法
@@ -51,9 +59,10 @@ export default {
           url: API.RIDER.QUERY + '?id=' + this.userInfo.id,
           method: 'GET'
         })
+        console.log(res);
         
-        if (res.statusCode === 200 && res.data.code === 0) {
-          this.orderList = res.data.data
+        if (res.code === 1) {
+          this.orderList = res.data|| []
         } else {
           uni.showToast({
             title: '获取订单失败',
@@ -66,6 +75,26 @@ export default {
           icon: 'none'
         })
       }
+    },
+    getStatusText(status) {
+      const statusMap = {
+        0: '已取消',
+        1: '已下单',
+        2: '配送中',
+        3: '已完成',
+        4: '申请退款'
+      }
+      return statusMap[status] || '未知状态'
+    },
+    getStatusClass(status) {
+      const classMap = {
+        0: 'status-cancelled',
+        1: 'status-ordered',
+        2: 'status-delivering',
+        3: 'status-completed',
+        4: 'status-refunding'
+      }
+      return classMap[status] || ''
     }
   }
 }
@@ -103,12 +132,61 @@ export default {
   font-weight: 500;
 }
 .order-status {
-  color: #007AFF;
   font-size: 26rpx;
   font-weight: 600;
-  background-color: rgba(0, 122, 255, 0.1);
   padding: 6rpx 20rpx;
   border-radius: 100rpx;
+}
+.status-cancelled {
+  color: #999999;
+  background-color: #F5F5F5;
+}
+.status-ordered {
+  color: #FF9500;
+  background-color: rgba(255, 149, 0, 0.1);
+}
+.status-delivering {
+  color: #007AFF;
+  background-color: rgba(0, 122, 255, 0.1);
+}
+.status-completed {
+  color: #34C759;
+  background-color: rgba(52, 199, 89, 0.1);
+}
+.status-refunding {
+  color: #FF3B30;
+  background-color: rgba(255, 59, 48, 0.1);
+}
+.order-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 2rpx solid #f5f5f5;
+}
+.customer-info {
+  display: flex;
+  align-items: center;
+}
+.name {
+  font-size: 28rpx;
+  color: #333;
+  margin-right: 20rpx;
+}
+.phone {
+  font-size: 28rpx;
+  color: #666;
+}
+.price {
+  font-size: 32rpx;
+  color: #FF3B30;
+  font-weight: bold;
+}
+.order-time {
+  margin-top: 20rpx;
+  font-size: 24rpx;
+  color: #999;
 }
 .order-address {
   font-size: 28rpx;

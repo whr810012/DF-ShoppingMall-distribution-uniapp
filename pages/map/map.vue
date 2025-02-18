@@ -26,6 +26,7 @@
 </template>
 
 <script>
+import { API, request } from '@/api/api.js'
 const amapUtils = require('../../utils/amap.js')
 
 export default {
@@ -52,16 +53,20 @@ export default {
       markerIcons: {
         start: '/static/images/marker-start.svg',
         end: '/static/images/marker-end.svg'
-      }
+      },
+      locationRefreshInterval: null,
     }
   },
+  
+  // 删除 mounted 钩子，改用 onLoad
   onLoad(options) {
+    // 通过 options 获取页面参数
     this.orderId = options.orderId
     this.toLatitude = parseFloat(options.toLatitude)
     this.toLongitude = parseFloat(options.toLongitude)
     console.log('目的地坐标：', this.toLatitude, this.toLongitude)
     
-    // 直接尝试获取位置，不再检查权限
+    // 获取位置
     this.getLocation()
     
     // 设置标记点
@@ -69,34 +74,63 @@ export default {
     
     // 规划路线
     this.planRoute()
+    
+    // 开始定时刷新位置
+    this.startLocationRefresh()
   },
+  
+  // 添加 onUnload 生命周期函数来清理定时器
+  onUnload() {
+    if (this.locationRefreshInterval) {
+      clearInterval(this.locationRefreshInterval)
+    }
+  },
+
   methods: {
     getLocation() {
       uni.showLoading({
         title: '定位中...'
       })
       
-      // 直接尝试获取位置
       uni.getLocation({
         type: 'gcj02',
         isHighAccuracy: true,
         highAccuracyExpireTime: 3000,
-        success: (res) => {
+        success: async (res) => {
           console.log('获取位置成功：', res)
           this.currentLatitude = res.latitude
           this.currentLongitude = res.longitude
           this.setMarkers()
           this.planRoute()
+          
+          // 调用接口更新骑手位置
+          try {
+            const response = await request({
+              url: API.RIDER.AMEND,
+              method: 'POST',
+              data: {
+                id: uni.getStorageSync('userInfo').id,
+                lng: res.longitude.toString(),
+                lat: res.latitude.toString()
+              }
+            })
+            
+            if (response.statusCode === 200) {
+              console.log('位置更新成功')
+            } else {
+              console.error('位置更新失败:', response)
+            }
+          } catch (error) {
+            console.error('位置更新请求失败:', error)
+          }
         },
         fail: (err) => {
           console.error('获取位置失败：', err)
-          // 获取失败时显示提示并使用默认位置
           uni.showModal({
             title: '提示',
             content: '无法获取您的位置，是否开启定位权限？',
             success: (res) => {
               if (res.confirm) {
-                // 打开设置页面
                 uni.openSetting({
                   success: (settingRes) => {
                     console.log('打开设置页面成功', settingRes)
@@ -104,15 +138,24 @@ export default {
                       // 如果用户在设置页面打开了定位权限，重新获取位置
                       this.getLocation()
                     } else {
-                      this.useDefaultLocation()
+                      // 如果用户没有开启权限，继续尝试获取位置
+                      setTimeout(() => {
+                        this.getLocation()
+                      }, 1000)
                     }
                   },
                   fail: () => {
-                    this.useDefaultLocation()
+                    // 打开设置页面失败，继续尝试获取位置
+                    setTimeout(() => {
+                      this.getLocation()
+                    }, 1000)
                   }
                 })
               } else {
-                this.useDefaultLocation()
+                // 用户取消，继续尝试获取位置
+                setTimeout(() => {
+                  this.getLocation()
+                }, 1000)
               }
             }
           })
@@ -121,19 +164,6 @@ export default {
           uni.hideLoading()
         }
       })
-    },
-
-    useDefaultLocation() {
-      uni.showToast({
-        title: '使用默认位置',
-        icon: 'none',
-        duration: 2000
-      })
-      // 使用默认位置（上海人民广场）
-      this.currentLatitude = 31.233706
-      this.currentLongitude = 121.472644
-      this.setMarkers()
-      this.planRoute()
     },
 
     setMarkers() {
@@ -290,6 +320,20 @@ export default {
           })
         }
       }
+    },
+    startLocationRefresh() {
+      // 初始化时先获取一次位置
+      this.getCurrentLocation()
+      
+      // 设置3分钟定时器
+      this.locationRefreshInterval = setInterval(() => {
+        this.getCurrentLocation()
+      }, 3 * 60 * 1000) // 3分钟转换为毫秒
+    },
+    
+    // 更新 getCurrentLocation 方法
+    getCurrentLocation() {
+      this.getLocation() // 直接调用 getLocation 方法，因为已经包含了位置更新的逻辑
     }
   }
 }

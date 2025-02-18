@@ -4,7 +4,8 @@ export const API = {
   // 骑手相关接口
   RIDER: {
     LOGIN: `${BASE_URL}/rider/login`,  // 登录接口
-    QUERY: `${BASE_URL}/rider/query`  // 查询接口 
+    QUERY: `${BASE_URL}/rider/query`,  // 查询接口 
+    AMEND: `${BASE_URL}/rider/amend`  // 更新位置接口
 
   }
 }
